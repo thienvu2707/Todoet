@@ -7,35 +7,22 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController{
     
-    var itemArray = [Items]()
+    var itemArray = [Item]()
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
-    let defaults = UserDefaults.standard
+//    let defaults = UserDefaults.standard
 
-    
-    
+
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        let newItem = Items()
-        newItem.title = "Find something"
-        itemArray.append(newItem)
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
-        let newItem2 = Items()
-        newItem2.title = "Eat dinner with the president"
-        itemArray.append(newItem2)
-        
-        let newItem3 = Items()
-        newItem3.title = "Become new Steve Jobs"
-        itemArray.append(newItem3)
-        
-        
-        if let items = defaults.array(forKey: "TodoListArray") as? [Items]
-        {
-            itemArray = items
-        }
+        loadItems()
     }
     
     
@@ -71,6 +58,10 @@ class TodoListViewController: UITableViewController{
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
 //        print(itemArray[indexPath.row])
         
+//        context.delete(itemArray[indexPath.row])
+//        itemArray.remove(at: indexPath.row)
+        
+        
         //reverse true false when user click on each cell
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
@@ -87,6 +78,7 @@ class TodoListViewController: UITableViewController{
     
     // MARK - Add new item to the list
     
+    //Add button what to do in it
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
         var textFieldOfAlert = UITextField()
@@ -98,15 +90,18 @@ class TodoListViewController: UITableViewController{
             //action will happen after user click button add todo in alert UI
             if textFieldOfAlert.text?.isEmpty == false {
                 
-                let newItem = Items()
+                let newItem = Item(context: self.context)
                 
                 newItem.title = textFieldOfAlert.text!
+                newItem.done = false
                 
                 self.itemArray.append(newItem)
                 
-                self.defaults.set(self.itemArray, forKey: "TodoListArray")
+                self.saveItems()
                 
-                self.tableView.reloadData()
+//                self.defaults.set(self.itemArray, forKey: "TodoListArray")
+                
+                
             } else {
                 alert.dismiss(animated: true, completion: nil)
             }
@@ -123,5 +118,59 @@ class TodoListViewController: UITableViewController{
         present(alert, animated: true, completion: nil)
     }
     
+    // MARK - Model manupulation method
+    
+    /**
+     func to save data in local database
+     */
+    func saveItems() {
+        
+        do {
+            try context.save()
+        } catch {
+            print("Error saving context \(error)")
+        }
+        
+        self.tableView.reloadData()
+    }
+    
+    // func fetching data from database
+    func loadItems(with request : NSFetchRequest<Item> = Item.fetchRequest()) {
+        
+        do{
+            itemArray = try context.fetch(request)
+        } catch {
+            print("Error fetch request \(error)")
+        }
+        tableView.reloadData()
+    }
+}
+
+extension TodoListViewController : UISearchBarDelegate {
+    
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        //request to fetch data from database to search
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+        //search each row in database column title
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+        
+        //Sort data after searching
+        let sortData = NSSortDescriptor(key: "title", ascending: true)
+        request.sortDescriptors = [sortData]
+        
+        //do fetch data from database
+        loadItems(with: request)
+    }
+    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            
+        }
+    }
 }
 
