@@ -9,7 +9,9 @@
 import UIKit
 import RealmSwift
 
-class CategoryViewController: UITableViewController {
+class CategoryViewController: SwipeTableViewController {
+    
+    
     
     let realm = try! Realm()
 
@@ -21,22 +23,27 @@ class CategoryViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         
-       loadCategory()
+        loadCategory()
+        
+        tableView.rowHeight = 80
+        
 
     }
     
     // MARK: TableView Datasource Methods
     
+    
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         
         //Create variable for cell with identifiers and path
-        let cell = tableView.dequeueReusableCell(withIdentifier: "CategoryCell", for: indexPath)
+        let cell = super.tableView(tableView, cellForRowAt: indexPath)
         
         //create variable each cell in array
         let categoryArray = self.categories?[indexPath.row].name ?? "Category not added yet"
         
         //show cell on tableView
         cell.textLabel?.text = categoryArray
+//        cell.delegate = self
         
         return cell
     }
@@ -82,6 +89,20 @@ class CategoryViewController: UITableViewController {
         tableView.reloadData()
     }
     
+    //MARK: Delete Data From Swipe
+    override func updateModel(at indexPath: IndexPath) {
+        if let categoryFordeletion = self.categories?[indexPath.row] {
+            do {
+                try self.realm.write {
+                    self.realm.delete(categoryFordeletion)
+                }
+            } catch {
+                print("Error deleting category \(error)")
+            }
+        }
+
+    }
+    
     
     //MARK: Add New catagory
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
@@ -120,3 +141,5 @@ class CategoryViewController: UITableViewController {
         present(alert, animated: true, completion: nil)
     }
 }
+
+// MARK: Swipe Cell Delegate Methods
