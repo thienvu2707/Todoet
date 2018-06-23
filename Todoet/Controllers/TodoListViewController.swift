@@ -8,9 +8,11 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController{
     
+    @IBOutlet weak var searchTodoItem: UISearchBar!
     let realm = try! Realm()
     
     var selectedCategory : Category? {
@@ -28,6 +30,32 @@ class TodoListViewController: SwipeTableViewController{
         tableView.rowHeight = 80.0
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        
+        title = selectedCategory?.name
+        guard let hexColor = selectedCategory?.hexColor else {fatalError()}
+        updateNavBar(withHexCode: hexColor)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        updateNavBar(withHexCode: "0096FF")
+    }
+
+    //MARK: Update Nav Bar
+    func updateNavBar(withHexCode hexCodeColor: String) {
+        guard let navBar = navigationController?.navigationBar else {
+            fatalError("Navigation bar does not exist")
+        }
+        
+        guard let navBarColor = UIColor(hexString: hexCodeColor) else { fatalError()}
+        
+        navBar.barTintColor = navBarColor
+        navBar.tintColor = ContrastColorOf(navBarColor, returnFlat: true)
+        navBar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor : ContrastColorOf(navBarColor, returnFlat: true)]
+        
+        searchTodoItem.barTintColor = navBarColor
+    }
+    
     //MARK: TableView DataSource Methods
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
@@ -37,6 +65,13 @@ class TodoListViewController: SwipeTableViewController{
         if let item = toDoItems?[indexPath.row] {
             
             cell.textLabel?.text = item.title
+            if let color = UIColor(hexString: selectedCategory!.hexColor)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(toDoItems!.count)) {
+                cell.backgroundColor = color
+                cell.textLabel?.textColor = ContrastColorOf(color, returnFlat: true)
+            }
+            
+            
+//            cell.backgroundColor = UIColor(hexString: (toDoItems?[indexPath.row].hexColor)!)
             
             //check if cell is selected or not
             cell.accessoryType = item.done == true ? .checkmark : .none
@@ -123,7 +158,7 @@ class TodoListViewController: SwipeTableViewController{
     // func fetching data from database
     func loadItems() {
         
-        toDoItems = selectedCategory?.items.sorted(byKeyPath: "title", ascending: true)
+        toDoItems = selectedCategory?.items.sorted(byKeyPath: "dateCreated", ascending: true)
         tableView.reloadData()
     }
     
